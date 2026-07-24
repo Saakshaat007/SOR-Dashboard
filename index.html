@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Order Routing Dashboard v3</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <span class="logo-mark">SOR</span>
+    <div class="header-titles">
+      <h1>Smart Order Routing Dashboard</h1>
+      <span class="header-sub">Real-time Order Book Analysis</span>
+    </div>
+  </div>
+  <div class="eligibility-badge">
+    <span class="elig-symbol">NIFTY50</span>
+    <span class="elig-divider">|</span>
+    <span class="elig-item">ADV: <strong>391 Cr</strong></span>
+    <span class="elig-divider">|</span>
+    <span class="elig-item">Liquidity Score: <strong class="elig-score">8.2 / 10</strong></span>
+    <span class="elig-divider">|</span>
+    <span class="elig-pass">ELIGIBLE</span>
+  </div>
+  <div class="header-right">
+    <div class="live-indicator">
+      <span class="live-dot"></span>
+      <span class="live-text">LIVE REPLAY</span>
+    </div>
+    <span id="clock" class="clock">--:--:--</span>
+  </div>
+</header>
+
+<!-- CONTROLS BAR -->
+<section class="controls-bar">
+  <div class="controls-left">
+    <div class="ctrl-item">
+      <span class="ctrl-label">Snapshot</span>
+      <span id="snapshot-index" class="snapshot-counter">-- / --</span>
+    </div>
+    <div class="ctrl-item">
+      <span class="ctrl-label">Data Time</span>
+      <span id="snapshot-time" class="snapshot-time">--</span>
+    </div>
+    <div class="ctrl-item">
+      <span class="ctrl-label">Price</span>
+      <span id="ctrl-price" class="ctrl-price">--</span>
+    </div>
+    <div class="ctrl-item">
+      <span class="ctrl-label">Current Route</span>
+      <span id="ctrl-route" class="ctrl-route">--</span>
+    </div>
+  </div>
+  <div class="controls-right">
+    <button id="pause-btn" class="ctrl-btn">Pause</button>
+    <button id="speed-btn" class="ctrl-btn">Speed x1</button>
+    <button class="ctrl-btn" onclick="downloadAllData()">Download All Data</button>
+  </div>
+</section>
+
+<!-- DECISION + GAUGE + STATS -->
+<section class="decision-section">
+
+  <div class="signal-box" id="signal-box">
+    <div class="signal-label">Current Market Signal</div>
+    <div class="signal-value" id="signal-value">--</div>
+    <div class="signal-reason" id="signal-reason">Analysing market data...</div>
+  </div>
+
+  <div class="heat-box">
+    <div class="heat-label">Market Heat Score</div>
+    <div class="gauge-wrap">
+      <canvas id="heatGauge" width="220" height="120"></canvas>
+      <div class="gauge-center-text">
+        <div class="heat-score-num" id="heat-score-num">--</div>
+        <div class="heat-score-sub" id="heat-score-sub">--</div>
+      </div>
+    </div>
+    <div class="heat-scale">
+      <span class="heat-low">0 Sell</span>
+      <span class="heat-mid">50 Neutral</span>
+      <span class="heat-high">100 Buy</span>
+    </div>
+  </div>
+
+  <div class="quick-stats">
+    <div class="qs-item">
+      <span class="qs-label">Mid Price</span>
+      <span class="qs-value" id="qs-price">--</span>
+      <span class="qs-change" id="qs-price-chg"></span>
+    </div>
+    <div class="qs-item">
+      <span class="qs-label">Spread</span>
+      <span class="qs-value" id="qs-spread">--</span>
+      <span class="qs-badge" id="qs-spread-badge">--</span>
+    </div>
+    <div class="qs-item">
+      <span class="qs-label">Buyer Pressure</span>
+      <span class="qs-value" id="qs-bid-vol">--</span>
+    </div>
+    <div class="qs-item">
+      <span class="qs-label">Seller Pressure</span>
+      <span class="qs-value" id="qs-ask-vol">--</span>
+    </div>
+    <div class="qs-item">
+      <span class="qs-label">Price Momentum</span>
+      <span class="qs-value" id="qs-momentum">--</span>
+    </div>
+    <div class="qs-item">
+      <span class="qs-label">Recommended Route</span>
+      <span class="qs-value route-val" id="qs-route">--</span>
+    </div>
+  </div>
+
+</section>
+
+<!-- BUYER VS SELLER PRESSURE BAR -->
+<section class="pressure-section">
+  <div class="chart-card">
+    <div class="chart-title">
+      Buyer vs Seller Pressure
+      <button class="dl-btn" onclick="downloadPressure()">Download Excel</button>
+    </div>
+    <div class="pressure-bar-wrap">
+      <div class="pressure-label-left">
+        <span class="p-label">BUYERS</span>
+        <span class="p-pct" id="buyer-pct">--%</span>
+      </div>
+      <div class="pressure-bar-bg">
+        <div class="pressure-bar-buy"  id="pressure-buy"></div>
+        <div class="pressure-bar-sell" id="pressure-sell"></div>
+      </div>
+      <div class="pressure-label-right">
+        <span class="p-pct" id="seller-pct">--%</span>
+        <span class="p-label">SELLERS</span>
+      </div>
+    </div>
+    <div class="pressure-sub" id="pressure-sub">--</div>
+  </div>
+</section>
+
+<!-- PRICE + VOLUME FLOW -->
+<section class="chart-row two-col">
+  <div class="chart-card">
+    <div class="chart-title">
+      Price Movement
+      <span class="chart-legend">
+        <span class="leg-dot" style="background:var(--green)"></span> Rising
+        <span class="leg-dot" style="background:var(--red)"></span> Falling
+      </span>
+      <button class="dl-btn" onclick="downloadChart('priceChart','Price_Movement')">Download Excel</button>
+    </div>
+    <canvas id="priceChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">
+      Buy vs Sell Volume History
+      <span class="chart-legend">
+        <span class="leg-dot" style="background:var(--green)"></span> Buy Vol
+        <span class="leg-dot" style="background:var(--red)"></span> Sell Vol
+      </span>
+      <button class="dl-btn" onclick="downloadChart('flowChart','Volume_Flow')">Download Excel</button>
+    </div>
+    <canvas id="flowChart"></canvas>
+  </div>
+</section>
+
+<!-- ROUTING BREAKDOWN + CUMULATIVE SIGNAL MIX -->
+<section class="chart-row two-col">
+  <div class="chart-card">
+    <div class="chart-title">
+      Routing Decision Breakdown
+      <span class="chart-hint">Running tally of routes picked during this replay.</span>
+      <button class="dl-btn" onclick="downloadRouteData()">Download Excel</button>
+    </div>
+    <canvas id="routeChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">
+      Cumulative Signal Mix
+      <span class="chart-hint">Accumulating BUY, SELL, NEUTRAL counts over the session.</span>
+      <button class="dl-btn" onclick="downloadChart('signalMixChart','Signal_Mix')">Download Excel</button>
+    </div>
+    <canvas id="signalMixChart"></canvas>
+  </div>
+</section>
+
+<!-- IMBALANCE WITH THRESHOLDS -->
+<section class="chart-row full-width">
+  <div class="chart-card">
+    <div class="chart-title">
+      Order Book Imbalance with Decision Thresholds
+      <span class="chart-hint">Above green line = BUY fires. Below red line = SELL fires. Between = NEUTRAL.</span>
+      <button class="dl-btn" onclick="downloadChart('imbThresholdChart','Imbalance_Thresholds')">Download Excel</button>
+    </div>
+    <canvas id="imbThresholdChart"></canvas>
+  </div>
+</section>
+
+<!-- SLIPPAGE CHART + SUMMARY -->
+<section class="chart-row two-col">
+  <div class="chart-card">
+    <div class="chart-title">
+      Simulated Execution Slippage (bps)
+      <span class="chart-hint">Green = price moved in our favour. Red = price moved against us.</span>
+      <button class="dl-btn" onclick="downloadSlippageData()">Download Excel</button>
+    </div>
+    <canvas id="slippageChart"></canvas>
+  </div>
+  <div class="chart-card slippage-summary-card">
+    <div class="chart-title">
+      Slippage Summary
+      <button class="dl-btn" onclick="downloadSlippageSummary()">Download Excel</button>
+    </div>
+    <div class="slip-row">
+      <span class="slip-label">Avg BUY Slippage</span>
+      <span class="slip-value pos" id="slip-buy-avg">--</span>
+    </div>
+    <div class="slip-row">
+      <span class="slip-label">Avg SELL Slippage</span>
+      <span class="slip-value" id="slip-sell-avg">--</span>
+    </div>
+    <div class="slip-row">
+      <span class="slip-label">Best BUY Slippage</span>
+      <span class="slip-value pos" id="slip-buy-best">--</span>
+    </div>
+    <div class="slip-row">
+      <span class="slip-label">Worst BUY Slippage</span>
+      <span class="slip-value neg" id="slip-buy-worst">--</span>
+    </div>
+    <div class="slip-row">
+      <span class="slip-label">Signals Tracked</span>
+      <span class="slip-value" id="slip-count">--</span>
+    </div>
+    <div class="slip-interpretation">
+      Positive bps on a BUY means the price rose after we decided to buy.
+      Negative bps on a SELL means the price fell after we decided to sell.
+      Both outcomes mean the signal was correct.
+    </div>
+  </div>
+</section>
+
+<!-- HEAT TREND + TRADING COST -->
+<section class="chart-row two-col">
+  <div class="chart-card">
+    <div class="chart-title">
+      Market Heat Trend
+      <span class="chart-hint">Above 50 = Buy pressure. Below 50 = Sell pressure.</span>
+      <button class="dl-btn" onclick="downloadChart('heatChart','Market_Heat_Trend')">Download Excel</button>
+    </div>
+    <canvas id="heatChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">
+      Trading Cost Monitor (Spread)
+      <span class="chart-hint">Low = cheap to trade. High = expensive.</span>
+      <button class="dl-btn" onclick="downloadChart('spreadChart','Trading_Cost_Spread')">Download Excel</button>
+    </div>
+    <canvas id="spreadChart"></canvas>
+  </div>
+</section>
+
+<!-- PRICE MOMENTUM -->
+<section class="chart-row full-width">
+  <div class="chart-card">
+    <div class="chart-title">
+      Price Momentum
+      <span class="chart-hint">Green bars = price went up. Red bars = price went down. Taller = bigger move.</span>
+      <button class="dl-btn" onclick="downloadChart('momentumChart','Price_Momentum')">Download Excel</button>
+    </div>
+    <canvas id="momentumChart"></canvas>
+  </div>
+</section>
+
+<!-- ORDER BOOK DEPTH -->
+<section class="chart-row two-col">
+  <div class="chart-card">
+    <div class="chart-title">
+      Order Book — Top 5 Levels
+      <button class="dl-btn" onclick="downloadLOBData()">Download Excel</button>
+    </div>
+    <div class="lob-table-wrap">
+      <table class="lob-table">
+        <thead>
+          <tr>
+            <th>Buyers Qty</th>
+            <th>Buyers Price</th>
+            <th>Sellers Price</th>
+            <th>Sellers Qty</th>
+          </tr>
+        </thead>
+        <tbody id="lob-tbody"></tbody>
+      </table>
+    </div>
+    <div class="lob-bar-section">
+      <div class="lob-bar-label">Total Visible Volume</div>
+      <div class="lob-bar-bg">
+        <div class="lob-bar-bid" id="lob-bar-bid"></div>
+        <div class="lob-bar-ask" id="lob-bar-ask"></div>
+      </div>
+      <div class="lob-bar-vals">
+        <span id="lob-bid-pct">Buyers --%</span>
+        <span id="lob-ask-pct">Sellers --%</span>
+      </div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">
+      Order Book Depth
+      <span class="chart-hint">Longer bar = more orders at that price level.</span>
+      <button class="dl-btn" onclick="downloadChart('depthChart','Order_Book_Depth')">Download Excel</button>
+    </div>
+    <canvas id="depthChart"></canvas>
+  </div>
+</section>
+
+<!-- SIGNAL HISTORY TABLE -->
+<section class="table-section">
+  <div class="chart-card">
+    <div class="table-header">
+      <div class="chart-title">
+        Signal History
+        <button class="dl-btn" onclick="downloadSignalHistory()">Download Excel</button>
+      </div>
+      <div class="table-filters">
+        <select id="signal-filter">
+          <option value="">All Signals</option>
+          <option value="BUY">BUY Only</option>
+          <option value="SELL">SELL Only</option>
+          <option value="NEUTRAL">NEUTRAL Only</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="signal-table">
+        <thead>
+          <tr>
+            <th data-col="snapshot_time">Time</th>
+            <th data-col="mid_price">Price</th>
+            <th data-col="price_momentum">Momentum</th>
+            <th data-col="spread">Spread</th>
+            <th data-col="market_heat">Heat</th>
+            <th data-col="route">Route</th>
+            <th data-col="slippage_bps">Slippage bps</th>
+            <th data-col="signal">Signal</th>
+          </tr>
+        </thead>
+        <tbody id="signal-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</section>
+
+<!-- LIVE FEED -->
+<section class="feed-section">
+  <div class="chart-card">
+    <div class="chart-title">
+      Live Market Events
+      <button class="dl-btn" onclick="downloadFeedData()">Download Excel</button>
+    </div>
+    <div id="trade-feed" class="trade-feed"></div>
+  </div>
+</section>
+
+<div id="error-banner" class="error-banner hidden">
+  <span id="error-msg"></span>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
