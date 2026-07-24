@@ -102,6 +102,15 @@ instant directional read without needing to read a number.
 
 ## Data
 
-3,000 real Limit Order Book snapshots captured between
-January 9 and January 13, 2023.
-Price range: 17,144 to 19,074 - a 9.41% rise over 4 days.
+| Field | Value |
+|---|---|
+| Source | Real Limit Order Book snapshots |
+| Total Rows | 3,000 |
+| Date Range | January 9 to January 13, 2023 |
+| Price Range | 17,144 to 19,074 |
+| Price Change | +9.41% over 4 days |
+| BUY Signals | 1,194 (39.8%) |
+| SELL Signals | 1,156 (38.5%) |
+| NEUTRAL Signals | 650 (21.7%) |
+| Avg Spread | 0.10 (tight market) |
+| Signal Accuracy | BUY avg +0.66 bps, SELL avg -0.28 bps |
