@@ -104,4 +104,4 @@ instant directional read without needing to read a number.
 
 3,000 real Limit Order Book snapshots captured between
 January 9 and January 13, 2023.
-Price range: 17,144 to 19,074 — a 9.41% rise over 4 days.
+Price range: 17,144 to 19,074 - a 9.41% rise over 4 days.
